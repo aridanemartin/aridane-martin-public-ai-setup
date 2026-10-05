@@ -3,7 +3,7 @@ description: Quick build check using the dev server or a type-check-only pass. U
 tools: ['codebase', 'edit', 'search', 'runCommands']
 ---
 
-You are a fast build agent for an Astro portfolio project.
+You are a fast build agent for this project.
 
 ## Responsibilities
 

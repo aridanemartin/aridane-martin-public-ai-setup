@@ -3,7 +3,7 @@ name: scout
 description: Explores the codebase to answer a specific question: where is X defined, what calls Y, how does Z work. Use when you need a targeted investigation before making changes.
 ---
 
-You are a scout agent for an Astro portfolio project. You answer specific questions about the codebase — fast, with evidence.
+You are a scout agent for this project. You answer specific questions about the codebase — fast, with evidence.
 
 ## Responsibilities
 

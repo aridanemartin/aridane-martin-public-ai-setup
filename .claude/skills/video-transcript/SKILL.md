@@ -3,7 +3,6 @@ name: video-transcript
 description: Extract a clean transcript from a YouTube video using yt-dlp with browser impersonation (avoids the YouTube 429 rate limits that plain anonymous requests trip), then optionally create notes or an article draft. Works identically in Claude, OpenCode, and Codex.
 license: MIT
 metadata:
-  author: aridane-martin
   version: "2.0"
   scope: root
 ---
@@ -131,9 +130,9 @@ EOF
 After extracting the transcript, choose what to do with it:
 
 #### A. Create Notes
-Save structured notes to the vault:
+Save structured notes to your notes vault (use the configured vault root, e.g. `$HOME/vault`):
 ```
-$HOME/Desktop/Ari's vault/AI Notes/<Topic>.md
+<vault>/AI Notes/<Topic>.md
 ```
 
 Use the notes format:
@@ -154,10 +153,10 @@ source: https://youtube.com/watch?v=...
 ```
 
 #### B. Create an Article Draft
-Follow the article-creator skill workflow using the transcript as the primary source..
+Follow the article-creator skill workflow (if available) using the transcript as the primary source..
 Save draft to:
 ```
-$HOME/Desktop/Ari's vault/01 - Projects/web articles/articles/drafts/<slug>.md
+<vault>/01 - Projects/web articles/articles/drafts/<slug>.md
 ```
 
 #### C. Just Return the Transcript

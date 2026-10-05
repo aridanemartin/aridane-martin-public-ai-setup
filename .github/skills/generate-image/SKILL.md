@@ -3,7 +3,6 @@ name: generate-image
 description: Generate website images locally using stable-diffusion.cpp (sd-server). No API key — runs on your GPU. Output is a PNG ready to pipe into the convert-image skill.
 license: MIT
 metadata:
-  author: aridane-martin
   version: "3.0"
   scope: root
 ---

@@ -3,7 +3,6 @@ name: create-skill
 description: Scaffold a new skill in ~/.agents/skills/<name>/ and automatically symlink it to .claude/skills/, opencode, and codex.
 license: MIT
 metadata:
-  author: aridane-martin
   version: "1.0"
   scope: global
 ---
@@ -50,7 +49,6 @@ name: <name>
 description: <description>
 license: MIT
 metadata:
-  author: aridane-martin
   version: "1.0"
   scope: <scope>
 ---

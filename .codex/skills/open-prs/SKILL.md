@@ -2,7 +2,6 @@
 name: open-prs
 description: Reports every open pull request across all GitHub repos and returns a list with URLs. Use when the user types /open-prs or asks to "list my open PRs", "show my open pull requests", "what PRs do I have open", "open-prs" — anywhere you need an inventory of the user's open PRs with links.
 metadata:
-  author: aridane-martin
   type: technique
   scope: root
 ---
@@ -76,13 +75,13 @@ Example of the final output shape:
 ```
 Open PRs (3 in 2 repos):
 
-aridanemartin/ai-engineer-interview-prep
-  [1] AI Notes lessons — 2026-08-30
-      https://github.com/aridanemartin/ai-engineer-interview-prep/pull/1
+owner/repo-one
+  [1] Add auth notes — 2026-08-30
+      https://github.com/owner/repo-one/pull/1
 
-aridanemartin/connectia-students
+owner/repo-two
   [42] feat(auth): password reset (draft)
-      https://github.com/aridanemartin/connectia-students/pull/42
+      https://github.com/owner/repo-two/pull/42
 ```
 
 Serve the URLs as clickable markdown links: `[title](url)`.

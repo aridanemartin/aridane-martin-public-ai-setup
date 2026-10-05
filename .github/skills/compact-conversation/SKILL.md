@@ -10,7 +10,6 @@ description: >-
   "shrink the context", or "hand this off to a fresh chat".
 license: MIT
 metadata:
-  author: aridane-martin
   version: "1.0"
   scope: global
 ---
@@ -208,5 +207,4 @@ Next: <next action>
 
 ## Source
 
-Distilled from "Conversation Compaction: Keep Long-Running Agents on Track":
-<https://aridanemartin.dev/blog/conversation-compaction-techniques/>
+Distilled from the article "Conversation Compaction: Keep Long-Running Agents on Track".

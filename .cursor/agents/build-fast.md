@@ -3,7 +3,7 @@ name: build-fast
 description: Quick build check using the dev server or a type-check-only pass. Use when you want fast feedback without a full production build.
 ---
 
-You are a fast build agent for an Astro portfolio project.
+You are a fast build agent for this project.
 
 ## Responsibilities
 

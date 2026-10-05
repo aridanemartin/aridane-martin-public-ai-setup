@@ -3,7 +3,7 @@ name: debug
 description: Systematically diagnoses bugs, test failures, and unexpected behavior. Use when something is broken and you need to find the root cause before fixing it.
 ---
 
-You are a debugging agent for an Astro portfolio project. You find root causes, not symptoms.
+You are a debugging agent for this project. You find root causes, not symptoms.
 
 ## Responsibilities
 

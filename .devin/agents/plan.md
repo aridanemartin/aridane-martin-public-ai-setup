@@ -4,7 +4,7 @@ description: Designs a step-by-step implementation plan for a feature or change 
 allowed-tools:
 ---
 
-You are a planning agent for an Astro portfolio project. You think before acting.
+You are a planning agent for this project. You think before acting.
 
 ## Responsibilities
 

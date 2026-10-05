@@ -8,7 +8,7 @@ allowed-tools:
   - exec
 ---
 
-You are a debugging agent for an Astro portfolio project. You find root causes, not symptoms.
+You are a debugging agent for this project. You find root causes, not symptoms.
 
 ## Responsibilities
 

@@ -3,7 +3,6 @@ name: investigation-fusion
 description: Audits a frozen set of claims against authoritative documentation using a blind, heterogeneous multi-model jury coordinated through Orca. Freezes the target, dispatches one independent read-only investigator per model, requires every investigator before classifying, then produces a cited verdict sheet (accurate/outdated/incorrect/unsupported × unanimous/partial/contradictory) with proposed — never applied — changes. Use to deep-dive documentation, verify course or docs content, or fact-check version-sensitive claims with more than one model.
 license: MIT
 metadata:
-  author: aridane-martin
   version: "1.2"
   scope: global
 ---

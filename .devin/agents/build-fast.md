@@ -4,7 +4,7 @@ description: Quick build check using the dev server or a type-check-only pass. U
 allowed-tools:
 ---
 
-You are a fast build agent for an Astro portfolio project.
+You are a fast build agent for this project.
 
 ## Responsibilities
 

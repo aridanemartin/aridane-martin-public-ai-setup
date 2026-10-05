@@ -3,14 +3,13 @@ name: convert-image
 description: Convert images between formats (PNG/JPG/WEBP/AVIF) using cwebp and sips. Used when adding images to blog articles — produces the webp for the article and jpg for OG.
 license: MIT
 metadata:
-  author: aridane-martin
   version: "1.0"
   scope: root
 ---
 
 # Convert Image
 
-Converts a source image to one or more output formats. Primary use case: preparing article cover images for the portfolio project.
+Converts a source image to one or more output formats. Common use case: preparing article cover images for a blog or website project.
 
 ## Tools Available
 
@@ -53,22 +52,23 @@ done
 
 ---
 
-## Portfolio Article Workflow
+## Blog Article Workflow
 
-When adding a cover image to a new blog article at `$HOME/workspace/aridane-martin-portfolio`:
+When adding a cover image to a new blog article, set the project root to your site's
+repository and adjust the content/asset folders to match its structure:
 
 ```bash
-# Source image (usually from ~/Desktop)
+# Source image
 SRC="<path-to-source.png>"
 SLUG="<article-slug>"
-PORTFOLIO="$HOME/workspace/aridane-martin-portfolio"
+PROJECT="<path-to-project-root>"
 NAME="<camelCaseName>Cover"   # e.g. gitWorktreesAiAgentsCover
 
-# WebP → goes in the article's _images/ folder
-cwebp -q 85 "$SRC" -o "$PORTFOLIO/src/content/blog/$SLUG/_images/$NAME.webp"
+# WebP → goes in the article's images folder
+cwebp -q 85 "$SRC" -o "$PROJECT/src/content/blog/$SLUG/_images/$NAME.webp"
 
-# JPG → goes in public/assets/og/
-sips -s format jpeg "$SRC" --out "$PORTFOLIO/public/assets/og/$NAME.jpg"
+# JPG → goes in the site's OG image folder
+sips -s format jpeg "$SRC" --out "$PROJECT/public/assets/og/$NAME.jpg"
 ```
 
 Frontmatter references:
@@ -81,7 +81,7 @@ ogImage: "/assets/og/<camelCaseName>Cover.jpg"
 
 ## Notes
 
-- Astro's `image()` schema validator requires the `.webp` file to physically exist before `dev`/`build` — always convert before starting the dev server
+- Astro's `image()` schema validator requires the `.webp` file to physically exist before `dev`/`build` — always convert before starting the dev server (other frameworks may differ)
 - OG images should stay as JPG (broad social media compatibility)
 - `cwebp -q 85` targets ~200–250 KB for a 1440px-wide cover; bump to `-q 90` if the image has fine text
 - `sips` preserves EXIF by default; add `--stripProfile` to remove it for smaller OG files

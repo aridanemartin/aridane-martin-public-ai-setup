@@ -1,16 +1,16 @@
 ---
 name: linkedin-post
-description: Generate a ready-to-copy LinkedIn post promoting a blog article from aridanemartin.dev. Matches Aridane's writing voice — punchy, direct, practical — and follows LinkedIn SEO best practices. Never publishes directly.
+description: Generate a ready-to-copy LinkedIn post promoting a blog article. Matches the author's voice and follows LinkedIn SEO best practices. Never publishes directly.
 license: MIT
 metadata:
-  author: aridane-martin
   version: "1.0"
   scope: root
 ---
 
 # LinkedIn Post Generator
 
-Generates a complete, copy-paste-ready LinkedIn post promoting a published or upcoming article from aridanemartin.dev. Matches the author's voice and applies LinkedIn SEO best practices.
+Generates a complete, copy-paste-ready LinkedIn post promoting a published or upcoming
+article from the user's blog. Matches the author's voice and applies LinkedIn SEO best practices.
 
 **Never publishes directly.** Output is always plain text for the user to review and copy.
 
@@ -26,40 +26,37 @@ Generates a complete, copy-paste-ready LinkedIn post promoting a published or up
 
 ## Prerequisites
 
+Ask the user for (or infer from the project):
+
+- The **blog base URL** (e.g. `https://example.com`), used to build the article link
+- The **article path** — a local file or URL to read from
+
 Read the article to extract:
+
 - Title, subtitle, and description
 - Key section headings (H2s) and opening paragraphs
 - Any surprising stats, benchmarks, or contrarian claims
 - Tags (for hashtag mapping)
-- Article slug → constructs URL: `https://www.aridanemartin.dev/blog/<slug>`
+- Article slug → builds the URL: `<blog-base-url>/blog/<slug>`
 
-Article drafts live at:
-```
-$HOME/Desktop/Ari's vault/01 - Projects/web articles/articles/drafts/<slug>.md
-```
-
-Published articles live at:
-```
-$HOME/Desktop/Ari's vault/01 - Projects/web articles/articles/published/<slug>.md
-```
-
-Portfolio source at:
-```
-$HOME/workspace/aridane-martin-portfolio/src/content/blog/<slug>/index.md
-```
+If the article lives in a CMS or content directory, read it from there — do not hardcode a
+personal path. Accept either a file path supplied by the user or the article text pasted inline.
 
 ---
 
 ## Voice Reference
 
-Aridane's voice is:
+Match the **author's** voice, inferred from the article itself. Common traits of a strong
+developer-blog voice:
+
 - **Punchy and direct** — no filler, no corporate speak
 - **Second person** — "you" as a fellow developer
 - **Practical** — leads with what you can *do*, not just what it *is*
 - **Short lines** — one clause per line on LinkedIn
 - **Opinionated** — shares a clear take, doesn't hedge
 
-Study the article's opening sentence — it almost always contains the best hook.
+Study the article's opening sentence — it almost always contains the best hook. If the user has
+given voice guidance, follow it over these defaults.
 
 ---
 
@@ -91,7 +88,7 @@ Study the article's opening sentence — it almost always contains the best hook
 
 [1-line closing: question, observation, or invitation]
 
-→ Full article: https://www.aridanemartin.dev/blog/<slug>
+→ Full article: <blog-base-url>/blog/<slug>
 
 #Hashtag1 #Hashtag2 #Hashtag3 #Hashtag4 #Hashtag5
 ```
@@ -111,6 +108,8 @@ Always generate 3 options with different angles:
 ---
 
 ## Hashtag Mapping
+
+Map the article's own tags to relevant LinkedIn hashtags. Example mapping:
 
 | Article tag | LinkedIn hashtags |
 |---|---|
@@ -156,19 +155,19 @@ The difference? The harness.
 
 Most developers obsess over which model to use. But the model is just the engine. What you build around it — the tools, constraints, and feedback loops — determines whether it actually works reliably.
 
-That's harness engineering. And it's where the real leverage is in 2026.
+That's harness engineering. And it's where the real leverage is.
 
 In the article I cover:
 
 → Why Agent = Model + Harness (and why this reframes everything)
 → Guides vs Sensors: the two controls every harness needs
 → Three regulation categories: maintainability, architecture fitness, behaviour
-→ Empirical evidence: 6.7% → 68.3% by changing only the harness format
+→ Empirical evidence: a big accuracy jump from changing only the harness format
 → Four pillars to build your first harness today
 
 What does your current harness look like?
 
-→ Full article: https://www.aridanemartin.dev/blog/harness-engineering
+→ Full article: <blog-base-url>/blog/harness-engineering
 
 #AIAgents #AgentEngineering #ContextEngineering #PromptEngineering #AIEngineering #DeveloperTools #SoftwareDevelopment
 

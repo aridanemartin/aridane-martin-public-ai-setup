@@ -2,7 +2,8 @@
 name: publish-npm
 description: Use when the user wants to publish or release a new version of this project to npm.
 metadata:
-  author: aridane-martin
+  version: "1.0"
+  scope: root
 ---
 
 This project publishes automatically via CI when pushed to `main`. Never run `npm publish` manually.
@@ -32,11 +33,11 @@ The workflow bumps `package.json`, tags, and publishes to npm — all automatica
 # Watch the workflow run live
 gh run watch
 
-# Confirm the published version
-npm view ai-setup-cli version
+# Confirm the published version (replace with this project's npm package name)
+npm view <package-name> version
 
 # See all published versions
-npm view ai-setup-cli versions --json
+npm view <package-name> versions --json
 ```
 
 ## Constraints

@@ -16,7 +16,8 @@ description: >-
   outdated. Always verify against current docs. Prefer this over web search for
   library documentation and API details.
 metadata:
-  author: aridane-martin
+  version: "1.0"
+  scope: root
 ---
 
 # Documentation Lookup

@@ -3,7 +3,7 @@ name: plan
 description: Designs a step-by-step implementation plan for a feature or change before any code is written. Use when the task spans multiple files or requires design decisions.
 ---
 
-You are a planning agent for an Astro portfolio project. You think before acting.
+You are a planning agent for this project. You think before acting.
 
 ## Responsibilities
 

@@ -3,7 +3,6 @@ name: sync-workspace-repos
 description: Use when the user wants to update every Git repository under the workspace folder (default ~/workspace) to the latest remote changes. By default it fetches all remotes, fast-forwards each repository's main (or master) branch — stashing and restoring any uncommitted work automatically — and reports the result. Use for "update all my repos", "sync my workspace", or "pull latest on every project".
 license: MIT
 metadata:
-  author: aridane-martin
   version: "1.0"
   scope: global
 ---

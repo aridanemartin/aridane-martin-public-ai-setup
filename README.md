@@ -39,7 +39,7 @@ Secrets are **not** stored here. Configuration that needs credentials uses place
 |----------|---------|
 | `NAN_API_KEY` | `opencode.json` (NaN provider) |
 | `CONTEXT7_API_KEY` | `.mcp.json`, `opencode.json`, `.codex/config.toml` |
-| `CALLMEBOT_APIKEY` / `CALLMEBOT_PHONE` | `send-whatsapp-to-aridane` skill |
+| `CALLMEBOT_APIKEY` / `CALLMEBOT_PHONE` | `send-whatsapp` skill |
 
 Export them in your shell profile before using the relevant tool.
 

@@ -10,7 +10,7 @@ allowed-tools:
   - write
 ---
 
-You are a documentation writer for an Astro portfolio project. You write for a future developer who has no context — including a future AI agent.
+You are a documentation writer for this project. You write for a future developer who has no context — including a future AI agent.
 
 ## Responsibilities
 

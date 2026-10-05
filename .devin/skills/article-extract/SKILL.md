@@ -3,7 +3,6 @@ name: article-extract
 description: Extract full content from a web article — body text, metadata, and inline images — and return structured output or save as a vault note.
 license: MIT
 metadata:
-  author: aridane-martin
   version: "1.0"
   scope: root
 ---
@@ -139,15 +138,15 @@ After extracting, choose what to do:
 Paste the structured output directly in the conversation.
 
 ### B. Save as Vault Note
-Save to:
+Save to your notes vault (use the vault root configured for the user, e.g. `$HOME/vault/03 - Resources/`):
 ```
-$HOME/Desktop/Ari's vault/03 - Resources/<topic-slug>.md
+<vault>/03 - Resources/<topic-slug>.md
 ```
 
 ### C. Save as Article Draft
 If the article will be used as source material for writing, save to:
 ```
-$HOME/Desktop/Ari's vault/01 - Projects/web articles/articles/<slug>.md
+<vault>/01 - Projects/web articles/articles/<slug>.md
 ```
 
 ---
