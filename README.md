@@ -40,8 +40,6 @@ Secrets are **not** stored here. Configuration that needs credentials uses place
 | `NAN_API_KEY` | `opencode.json` (NaN provider) |
 | `CONTEXT7_API_KEY` | `.mcp.json`, `opencode.json`, `.codex/config.toml` |
 | `CALLMEBOT_APIKEY` / `CALLMEBOT_PHONE` | `send-whatsapp-to-aridane` skill |
-| `ELEVENLABS_API_KEY`, `FREESOUND_API_KEY` | `hve-spielberg` skill |
-| `GITHUB_TOKEN` / `GH_TOKEN` | `seo` skill (GitHub features) |
 
 Export them in your shell profile before using the relevant tool.
 
@@ -57,7 +55,4 @@ Export them in your shell profile before using the relevant tool.
 
 ## Notes
 
-- The `herdr` skill is referenced by its `SKILL.md` only — its vendored upstream source tree
-  (41 MB) is intentionally excluded.
-- Machine-specific and managed-tool hooks (e.g. herdr's) are not published.
 - Personal absolute paths in skills were rewritten to `$HOME`.
