@@ -1,6 +1,8 @@
 ---
 name: publish-npm
 description: Use when the user wants to publish or release a new version of this project to npm.
+metadata:
+  author: aridane-martin
 ---
 
 This project publishes automatically via CI when pushed to `main`. Never run `npm publish` manually.

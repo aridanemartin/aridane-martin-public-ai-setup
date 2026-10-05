@@ -2,6 +2,7 @@
 name: write-commit
 description: Use when the user wants to commit staged or unstaged changes — generates a conventional commit message from the diff, stages files if needed, and commits.
 metadata:
+  author: aridane-martin
   type: technique
   scope: root
 ---

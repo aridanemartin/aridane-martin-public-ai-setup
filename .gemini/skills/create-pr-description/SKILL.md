@@ -2,6 +2,7 @@
 name: create-pr-description
 description: Use when the user needs a pull request description drafted — analyzes branch commits and diff vs base branch, then generates a structured markdown body ready to copy or pass to create-pr.
 metadata:
+  author: aridane-martin
   type: technique
   scope: root
 ---

@@ -2,6 +2,7 @@
 name: create-pr
 description: Use when the user wants to open a pull request — ensures the branch is pushed, generates a description, and creates the PR via gh CLI with title and body.
 metadata:
+  author: aridane-martin
   type: technique
   scope: root
 ---
