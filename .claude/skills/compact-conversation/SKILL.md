@@ -18,7 +18,7 @@ description: >-
   context", or "hand this off to a fresh chat".
 license: MIT
 metadata:
-  version: "5.0"
+  version: "5.1"
   scope: global
 ---
 
@@ -112,19 +112,42 @@ No separate recommend-then-ask conversation, no "html or defaults" question, and
 manual paste-back — always generate the page and let Submit deliver the picks
 automatically.
 
+**2.0 — Detect the destination, once.** Run the same checks Step 6 uses, now, so the
+page can tell the user where to look right after they click Submit instead of them
+waiting on this screen for a result:
+
+```bash
+test "${HERDR_ENV:-}" = 1
+```
+
+```bash
+which orca >/dev/null 2>&1 && orca status --json
+```
+
+Keep whichever one passes — Herdr first, then Orca, then neither — and reuse that
+same answer in Step 6 rather than re-checking. Compute `%%RETURN_HINT%%` from it (a
+quoted JS string, fills in "You can return to **\_\_**." on the page):
+
+| Detected | `%%RETURN_HINT%%` |
+|---|---|
+| Herdr | `"the new pane Herdr will open for this handoff"` |
+| Orca | `"the new terminal Orca will open for this handoff"` |
+| Neither | `"your terminal — the ready-to-paste block will appear in this chat"` |
+
 **2.1 — Pick a port.**
 
 ```bash
 python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()"
 ```
 
-**2.2 — Fill in `templates/picker.html`.** Same six tokens as before, plus
-`%%SERVER_PORT%%` (the port from 2.1). See the table and heuristics below. Write the
-result to `.compaction/picker-<timestamp>.html`.
+**2.2 — Fill in `templates/picker.html`.** `%%SERVER_PORT%%` (the port from 2.1) and
+`%%RETURN_HINT%%` (from 2.0), plus the technique/items/prediction tokens below. See
+the table and heuristics below. Write the result to `.compaction/picker-<timestamp>.html`.
 
 | Token | Replace with |
 |---|---|
 | `%%SERVER_PORT%%` | The port from 2.1, as a bare integer (no quotes) |
+| `%%RETURN_HINT%%` | The quoted JS string from 2.0's table |
 | `%%ITEMS%%` | `{ role: '...', text: '...' }` objects, comma-separated, no brackets — the last ~20–30 messages, oldest first, `text` a ~60-char preview |
 | `%%ROLLING_RECOMMENDED%%` / `%%PRUNING_RECOMMENDED%%` / `%%RAG_RECOMMENDED%%` | `true` on exactly one, `false` on the other two |
 | `%%ROLLING_TEXT%%` / `%%PRUNING_TEXT%%` / `%%RAG_TEXT%%` | Quoted JS strings. The recommended one gets your session-specific reasoning (one sentence); the other two keep the generic "best for" description from the table above |
@@ -282,19 +305,14 @@ Order matters — authority first, recency/detail last:
 3. **Technique body** — the rolling-window tail, the structured-state block, or the
    transcript-file pointer, per the technique named in Step 3.
 
-### Step 6: Detect the destination and hand off — no confirmation question
+### Step 6: Hand off to the destination detected in Step 2.0 — no confirmation question
 
 Spawning is still a visible action, so always tell the user what you're doing and why
 **as you do it**, in the same message as the result — but don't block on a yes/no
-first. Detect, then act:
+first. Act on whichever branch Step 2.0 already detected — don't re-run the checks:
 
-1. **Herdr** — only when running inside Herdr:
-
-   ```bash
-   test "${HERDR_ENV:-}" = 1
-   ```
-
-   If it passes, use the `herdr` skill and its `pane` / `agent` commands:
+1. **Herdr** — if Step 2.0 found it, use the `herdr` skill and its `pane` / `agent`
+   commands:
 
    ```bash
    herdr pane split --current --direction right --cwd "$PWD" --no-focus
@@ -309,11 +327,10 @@ first. Detect, then act:
    with the path instead of inlining it — the transcript file from Step 4c already
    lives on disk, so point the new agent at both paths.
 
-2. **Orca** — when the `orca` binary resolves and the app is up. Resolve the
-   executable per the `orca-cli` skill, confirm with `ORCA status --json`, then load
-   the version-matched guide with `ORCA skills get orca-cli` and follow it for the
-   handoff — spawn a terminal/agent in the target worktree and prompt it with the
-   artifact. Prefer `--json` for agent-driven calls.
+2. **Orca** — if Step 2.0 found it, load the version-matched guide with
+   `ORCA skills get orca-cli` and follow it for the handoff — spawn a terminal/agent in
+   the target worktree and prompt it with the artifact. Prefer `--json` for
+   agent-driven calls.
 
 3. **Neither available** — print the artifact as a ready-to-paste block for a
    brand-new chat, and nothing else, so it can be copied in one piece:
@@ -369,9 +386,9 @@ new Orca terminal in this worktree" or "Herdr: new pane, split right, kind `clau
   happened, don't ask permission before it happens.
 - **The template is fixed, the data isn't.** `templates/picker.html` and
   `templates/server.py` are the same files every time — don't redesign them per
-  invocation. Only the picker's six `%%TOKEN%%` values change, computed fresh from
-  the live conversation each time this skill runs; the server takes its port and
-  result path as plain arguments, no templating needed.
+  invocation. Only the picker's `%%TOKEN%%` values change, computed fresh from the
+  live conversation (and the Step 2.0 destination check) each time this skill runs;
+  the server takes its port and result path as plain arguments, no templating needed.
 - **Evidence pointers over paraphrase:** in selective pruning, cite a retrievable
   pointer (file path, run ID, URL) for bulky content instead of pasting it.
 - **Excluded on purpose:** prompt compression. It solves a different problem (bulky

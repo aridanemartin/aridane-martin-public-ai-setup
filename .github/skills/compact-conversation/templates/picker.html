@@ -428,6 +428,11 @@ h1 {
 // start, already claimed, etc.) Submit falls back to the clipboard.
 const SERVER_PORT = %%SERVER_PORT%%;
 
+// Where the agent will hand off to once it has the picks — detected once in
+// the skill's Step 2 (Herdr / Orca / neither), shown in the post-submit
+// message so the user knows where to look next instead of waiting here.
+const RETURN_HINT = %%RETURN_HINT%%;
+
 // { role: 'user'|'assistant', text: string }[] — the last ~20-30 messages
 // of the live conversation, oldest first, each text a ~60-char preview.
 const ITEMS = [%%ITEMS%%];
@@ -650,10 +655,10 @@ document.getElementById('submit').addEventListener('click', async () => {
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('server responded ' + res.status);
-    const data = await res.json();
+    await res.json();
     btn.disabled = true;
     btn.textContent = 'Submitted';
-    showOutput('Sent', data.message || 'Your agent will take it from here — nothing to paste.');
+    showOutput('Compaction submitted', `You can return to ${RETURN_HINT}.`);
   } catch (e) {
     fallbackToClipboard('Could not reach the local server');
   }
