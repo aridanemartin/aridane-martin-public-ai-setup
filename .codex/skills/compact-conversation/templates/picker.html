@@ -324,6 +324,12 @@ h1 {
   justify-content: space-between;
   gap: 1rem;
 }
+.legend { display: none; gap: 1.2rem; flex-wrap: wrap; padding: 0.6rem 0 0.2rem; font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+.legend.visible { display: flex; }
+.legend span b { font-family: var(--font-mono); margin-right: 0.35rem; }
+.legend .l-full b { color: var(--keep); }
+.legend .l-collapse b { color: var(--collapse); }
+.legend .l-drop b { color: var(--drop); }
 .tally {
   display: flex;
   gap: 0.9rem;
@@ -397,6 +403,11 @@ h1 {
       <button class="tab" role="tab" data-tab="rag" aria-selected="false"><span class="n">3</span> RAG on history</button>
     </div>
     <div class="reco" id="reco"></div>
+    <div class="legend" id="legend">
+      <span class="l-full"><b>Full</b>kept in full detail, not summarized.</span>
+      <span class="l-collapse"><b>Collapse</b>reduced to outcome + reason (one or two lines).</span>
+      <span class="l-drop"><b>Drop</b>removed from the summary entirely.</span>
+    </div>
   </header>
 
   <div class="list-wrap">
@@ -467,6 +478,7 @@ function render() {
   const star = reco.recommended ? '<span class="star">★</span>' : '<span class="star" style="opacity:.35">—</span>';
   document.getElementById('reco').innerHTML = `${star}<span><strong>${reco.label}</strong> — ${reco.text}</span>`;
 
+  document.getElementById('legend').classList.toggle('visible', active === 'pruning');
   const list = document.getElementById('list');
   list.innerHTML = '';
   list.style.position = 'relative';
