@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Compact this conversation</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/*
+  Layout concept: a review-list tool — sticky header carrying the technique
+  switch and the recommendation line, a scrollable diff-style item list below,
+  a sticky tally+submit bar pinned to the bottom. Three technique modes share
+  one list and one visual language, each changing only how a row is marked.
+*/
+:root {
+  color-scheme: light;
+  --bg: #faf9f6;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --border: #e3e0d8;
+  --border-strong: #cbc7bb;
+  --text: #211f1a;
+  --text-muted: #6e6a60;
+  --text-faint: #a7a295;
+  --accent: #3a5ba0;
+  --accent-ink: #ffffff;
+  --accent-wash: #eaeef7;
+  --keep: #2f7d4f;
+  --keep-wash: #e7f3ec;
+  --collapse: #a9790a;
+  --collapse-wash: #faf1de;
+  --drop: #b4483a;
+  --drop-wash: #f8eae7;
+  --shadow: 0 1px 2px rgba(33,31,26,0.06), 0 8px 24px rgba(33,31,26,0.06);
+  --font-display: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #17160f;
+    --surface: #201f18;
+    --surface-raised: #262419;
+    --border: #38352a;
+    --border-strong: #4c4836;
+    --text: #f2efe6;
+    --text-muted: #a8a295;
+    --text-faint: #6f6b5e;
+    --accent: #8ca4e0;
+    --accent-ink: #15213f;
+    --accent-wash: #232c42;
+    --keep: #67bb8a;
+    --keep-wash: #1e2f24;
+    --collapse: #d9a441;
+    --collapse-wash: #332c18;
+    --drop: #e0897a;
+    --drop-wash: #3a2420;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #17160f;
+  --surface: #201f18;
+  --surface-raised: #262419;
+  --border: #38352a;
+  --border-strong: #4c4836;
+  --text: #f2efe6;
+  --text-muted: #a8a295;
+  --text-faint: #6f6b5e;
+  --accent: #8ca4e0;
+  --accent-ink: #15213f;
+  --accent-wash: #232c42;
+  --keep: #67bb8a;
+  --keep-wash: #1e2f24;
+  --collapse: #d9a441;
+  --collapse-wash: #332c18;
+  --drop: #e0897a;
+  --drop-wash: #3a2420;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--accent-wash); }
+
+.shell {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+header.page-head { margin-bottom: 1.25rem; }
+h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.3rem;
+  text-wrap: balance;
+}
+.subhead {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin: 0 0 1.1rem;
+  max-width: 62ch;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.tab {
+  appearance: none;
+  border: none;
+  background: none;
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.55rem 0.2rem;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tab .n {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+}
+.tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+.tab[aria-selected="true"] .n { color: var(--accent); border-color: var(--accent); }
+.tab:hover { color: var(--text); }
+
+.reco {
+  margin-top: 0.9rem;
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  background: var(--accent-wash);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.86rem;
+  color: var(--text);
+}
+.reco strong { color: var(--accent); }
+.reco .star { font-family: var(--font-mono); color: var(--accent); flex-shrink: 0; }
+
+.list-wrap {
+  flex: 1;
+  margin-top: 1.1rem;
+  position: relative;
+}
+.list {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.row {
+  display: grid;
+  grid-template-columns: 5.4rem 1fr auto;
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+.row:last-child { border-bottom: none; }
+.row .role {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: var(--text-faint);
+  padding-top: 0.2rem;
+}
+.row .role.user { color: var(--accent); }
+.row .preview {
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--text);
+  padding-top: 0.05rem;
+}
+.row.is-dropped { opacity: 0.4; }
+.row.is-dropped .preview { text-decoration: line-through; text-decoration-color: var(--drop); text-decoration-thickness: 1.5px; }
+.row.is-collapsed .preview { color: var(--text-muted); }
+
+.chip {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.chip.keep { background: var(--keep-wash); color: var(--keep); }
+.chip.collapse { background: var(--collapse-wash); color: var(--collapse); }
+.chip.drop { background: var(--drop-wash); color: var(--drop); }
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.segmented button {
+  appearance: none;
+  border: none;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 0.32rem 0.5rem;
+  cursor: pointer;
+  border-right: 1px solid var(--border-strong);
+}
+.segmented button:last-child { border-right: none; }
+.segmented button:hover { background: var(--bg); }
+.segmented button[data-active="true"][data-val="full"] { background: var(--keep); color: #fff; }
+.segmented button[data-active="true"][data-val="collapse"] { background: var(--collapse); color: #fff; }
+.segmented button[data-active="true"][data-val="drop"] { background: var(--drop); color: #fff; }
+
+.rag-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.rag-toggle input {
+  appearance: none;
+  width: 1.05rem;
+  height: 1.05rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 5px;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+.rag-toggle input:checked { background: var(--keep); border-color: var(--keep); }
+.rag-toggle input:checked::after {
+  content: "";
+  position: absolute; left: 4px; top: 0.5px;
+  width: 4px; height: 8px;
+  border: solid #fff; border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.cutoff {
+  position: absolute;
+  left: 0; right: 0;
+  height: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  transform: translateY(-50%);
+  cursor: ns-resize;
+  touch-action: none;
+}
+.cutoff .line {
+  flex: 1;
+  height: 2px;
+  background: var(--accent);
+  position: relative;
+}
+.cutoff .line::before {
+  content: "";
+  position: absolute; left: 0; right: 0; top: -8px; bottom: -8px;
+}
+.cutoff .handle {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.cutoff .handle::before { content: "⋮⋮"; letter-spacing: -1px; opacity: 0.7; }
+
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  margin: 1.1rem -1rem 0;
+  padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to bottom, transparent, var(--bg) 18%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.tally {
+  display: flex;
+  gap: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tally b { color: var(--text); font-weight: 600; }
+.tally .t-keep b { color: var(--keep); }
+.tally .t-collapse b { color: var(--collapse); }
+.tally .t-drop b { color: var(--drop); }
+
+.submit-btn {
+  appearance: none;
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.65rem 1.3rem;
+  border-radius: 9px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  flex-shrink: 0;
+}
+.submit-btn:hover { filter: brightness(1.05); }
+.submit-btn:active { transform: translateY(1px); }
+
+.output {
+  margin: 0.8rem 0 1.2rem;
+  display: none;
+}
+.output.visible { display: block; }
+.output .label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--keep);
+  margin-bottom: 0.4rem;
+}
+.output textarea {
+  width: 100%;
+  height: 110px;
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem;
+}
+
+@media (max-width: 480px) {
+  .row { grid-template-columns: 1fr; gap: 0.35rem; }
+  .row .role { padding-top: 0; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="page-head">
+    <h1>Compact this conversation</h1>
+    <p class="subhead">Three ways to shrink the transcript into a handoff artifact. Pick one, then mark what goes in — everything's pre-marked from a first pass over the session, adjust anything before continuing.</p>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="rolling" aria-selected="true"><span class="n">1</span> Rolling window</button>
+      <button class="tab" role="tab" data-tab="pruning" aria-selected="false"><span class="n">2</span> Selective pruning</button>
+      <button class="tab" role="tab" data-tab="rag" aria-selected="false"><span class="n">3</span> RAG on history</button>
+    </div>
+    <div class="reco" id="reco"></div>
+  </header>
+
+  <div class="list-wrap">
+    <div class="list" id="list"></div>
+  </div>
+
+  <div class="output" id="output">
+    <div class="label" id="outputLabel"></div>
+    <textarea readonly id="outputText"></textarea>
+  </div>
+
+  <div class="action-bar">
+    <div class="tally" id="tally"></div>
+    <button class="submit-btn" id="submit">Submit</button>
+  </div>
+</div>
+
+<script>
+/*
+ * Everything in this block is generated fresh per invocation — see the
+ * compact-conversation skill's Step 2 for exactly what fills each token.
+ * Tokens below (%%LIKE_THIS%%) are replaced with real JS literals before
+ * this file is written to .compaction/picker-<timestamp>.html; nothing in
+ * this file should still contain a %%...%% token once generated.
+ */
+
+// The capture server's port (see templates/server.py) — Submit POSTs here
+// instead of copying to the clipboard. If this is unreachable (server didn't
+// start, already claimed, etc.) Submit falls back to the clipboard.
+const SERVER_PORT = %%SERVER_PORT%%;
+
+// { role: 'user'|'assistant', text: string }[] — the last ~20-30 messages
+// of the live conversation, oldest first, each text a ~60-char preview.
+const ITEMS = [%%ITEMS%%];
+
+// One entry per technique. `recommended: true` on exactly one — the page
+// opens on that tab and shows its star. `text` on the recommended entry is
+// the session-specific reasoning; the other two keep their generic
+// description (what that technique keeps/drops, from the skill's table).
+const RECO = {
+  rolling: { label: 'Rolling window', recommended: %%ROLLING_RECOMMENDED%%, text: %%ROLLING_TEXT%% },
+  pruning: { label: 'Selective pruning', recommended: %%PRUNING_RECOMMENDED%%, text: %%PRUNING_TEXT%% },
+  rag: { label: 'RAG on history', recommended: %%RAG_RECOMMENDED%%, text: %%RAG_TEXT%% },
+};
+
+let active = Object.keys(RECO).find(k => RECO[k].recommended) || 'rolling';
+
+// Rolling window: index into ITEMS where the kept window starts (everything
+// from this index on is kept). Predict a sensible split, not just "keep all".
+let cutoffIndex = %%CUTOFF_DEFAULT%%;
+
+// Selective pruning: 'full' | 'collapse' | 'drop' per item, same length as
+// ITEMS, predicted from a first pass — not defaulted to all-'full'.
+const pruneState = [%%PRUNE_DEFAULTS%%];
+
+// RAG on history: boolean per item (true = included in the saved transcript),
+// same length as ITEMS, predicted from a first pass.
+const ragState = [%%RAG_DEFAULTS%%];
+
+function render() {
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === active));
+  const reco = RECO[active];
+  const star = reco.recommended ? '<span class="star">★</span>' : '<span class="star" style="opacity:.35">—</span>';
+  document.getElementById('reco').innerHTML = `${star}<span><strong>${reco.label}</strong> — ${reco.text}</span>`;
+
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  list.style.position = 'relative';
+
+  ITEMS.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.dataset.i = i;
+
+    let stateMarkup = '';
+    if (active === 'rolling') {
+      if (i < cutoffIndex) row.classList.add('is-dropped');
+    } else if (active === 'pruning') {
+      const v = pruneState[i];
+      if (v === 'drop') row.classList.add('is-dropped');
+      if (v === 'collapse') row.classList.add('is-collapsed');
+      stateMarkup = `<div class="segmented" data-i="${i}">
+        <button data-val="full" data-active="${v==='full'}">Full</button>
+        <button data-val="collapse" data-active="${v==='collapse'}">Collapse</button>
+        <button data-val="drop" data-active="${v==='drop'}">Drop</button>
+      </div>`;
+    } else if (active === 'rag') {
+      const on = ragState[i];
+      if (!on) row.classList.add('is-dropped');
+      stateMarkup = `<label class="rag-toggle"><input type="checkbox" data-i="${i}" ${on ? 'checked' : ''}> ${on ? 'include' : 'excluded'}</label>`;
+    }
+
+    row.innerHTML = `
+      <div class="role ${item.role}">${item.role}</div>
+      <div class="preview">${item.text}</div>
+      <div>${stateMarkup}</div>
+    `;
+    list.appendChild(row);
+  });
+
+  if (active === 'pruning') {
+    list.querySelectorAll('.segmented button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = Number(btn.parentElement.dataset.i);
+        pruneState[i] = btn.dataset.val;
+        render();
+      });
+    });
+  }
+  if (active === 'rag') {
+    list.querySelectorAll('.rag-toggle input').forEach(cb => {
+      cb.addEventListener('change', () => {
+        ragState[Number(cb.dataset.i)] = cb.checked;
+        render();
+      });
+    });
+  }
+  if (active === 'rolling') {
+    placeCutoff();
+  }
+
+  updateTally();
+}
+
+function placeCutoff() {
+  const list = document.getElementById('list');
+  const rows = [...list.querySelectorAll('.row')];
+  const existing = list.querySelector('.cutoff');
+  if (existing) existing.remove();
+  if (rows.length === 0) return;
+
+  const cutoffEl = document.createElement('div');
+  cutoffEl.className = 'cutoff';
+  cutoffEl.innerHTML = `<div class="line"></div><div class="handle">drag to set cutoff</div>`;
+  list.appendChild(cutoffEl);
+
+  function positionAt(index) {
+    const listRect = list.getBoundingClientRect();
+    let y;
+    if (index <= 0) y = rows[0].getBoundingClientRect().top - listRect.top;
+    else if (index >= rows.length) y = rows[rows.length - 1].getBoundingClientRect().bottom - listRect.top;
+    else y = rows[index].getBoundingClientRect().top - listRect.top;
+    cutoffEl.style.top = y + 'px';
+  }
+  positionAt(cutoffIndex);
+
+  let dragging = false;
+  cutoffEl.addEventListener('pointerdown', e => { dragging = true; cutoffEl.setPointerCapture(e.pointerId); });
+  cutoffEl.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const listRect = list.getBoundingClientRect();
+    const y = e.clientY - listRect.top;
+    let nearest = 0, best = Infinity;
+    rows.forEach((r, idx) => {
+      const mid = r.getBoundingClientRect().top - listRect.top;
+      const d = Math.abs(mid - y);
+      if (d < best) { best = d; nearest = idx; }
+    });
+    const lastMid = rows[rows.length - 1].getBoundingClientRect().bottom - listRect.top;
+    if (Math.abs(lastMid - y) < best) nearest = rows.length;
+    if (nearest !== cutoffIndex) {
+      cutoffIndex = nearest;
+      rows.forEach((r, idx) => r.classList.toggle('is-dropped', idx < cutoffIndex));
+      positionAt(cutoffIndex);
+      updateTally();
+    }
+  });
+  cutoffEl.addEventListener('pointerup', e => { dragging = false; cutoffEl.releasePointerCapture(e.pointerId); });
+}
+
+function updateTally() {
+  const tally = document.getElementById('tally');
+  if (active === 'rolling') {
+    const kept = ITEMS.length - cutoffIndex;
+    const dropped = cutoffIndex;
+    tally.innerHTML = `<span class="t-keep">kept <b>${kept}</b></span><span class="t-drop">dropped <b>${dropped}</b></span>`;
+  } else if (active === 'pruning') {
+    const full = pruneState.filter(v => v === 'full').length;
+    const collapse = pruneState.filter(v => v === 'collapse').length;
+    const drop = pruneState.filter(v => v === 'drop').length;
+    tally.innerHTML = `<span class="t-keep">full <b>${full}</b></span><span class="t-collapse">collapse <b>${collapse}</b></span><span class="t-drop">drop <b>${drop}</b></span>`;
+  } else {
+    const on = ragState.filter(Boolean).length;
+    tally.innerHTML = `<span class="t-keep">include <b>${on}</b></span><span class="t-drop">exclude <b>${ragState.length - on}</b></span>`;
+  }
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    active = tab.dataset.tab;
+    document.getElementById('output').classList.remove('visible');
+    render();
+  });
+});
+
+function buildPayload() {
+  // Per-item state, same length/order as ITEMS: 'keep'/'drop' for the binary
+  // techniques, 'full'/'collapse'/'drop' for selective pruning.
+  let state;
+  if (active === 'rolling') {
+    state = ITEMS.map((_, i) => (i >= cutoffIndex ? 'keep' : 'drop'));
+  } else if (active === 'pruning') {
+    state = pruneState.slice();
+  } else {
+    state = ragState.map(on => (on ? 'keep' : 'drop'));
+  }
+  return {
+    technique: RECO[active].label,
+    items: ITEMS.map((it, i) => ({ role: it.role, text: it.text, state: state[i] })),
+  };
+}
+
+function showOutput(label, text) {
+  document.getElementById('outputLabel').textContent = label;
+  document.getElementById('outputText').value = text || '';
+  document.getElementById('output').classList.add('visible');
+}
+
+function fallbackToClipboard(reason) {
+  const payload = buildPayload();
+  const lines = [`TECHNIQUE: ${payload.technique}`];
+  const byState = {};
+  payload.items.forEach(it => {
+    (byState[it.state] = byState[it.state] || []).push(`${it.role}: ${it.text}`);
+  });
+  const labels = { keep: 'KEEP', drop: 'DROP', full: 'FULL DETAIL', collapse: 'COLLAPSE TO OUTCOME+REASON' };
+  Object.keys(labels).forEach(key => {
+    if (byState[key] && byState[key].length) lines.push(`${labels[key]}: ${byState[key].join(' | ')}`);
+  });
+  const text = lines.join('\n');
+  showOutput(`${reason} — copied. Paste it back into your chat with the agent.`, text);
+  function legacyCopy() {
+    const out = document.getElementById('outputText');
+    out.select();
+    try { document.execCommand('copy'); } catch (e) {}
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(legacyCopy);
+  } else {
+    legacyCopy();
+  }
+}
+
+document.getElementById('submit').addEventListener('click', async () => {
+  const btn = document.getElementById('submit');
+  const payload = buildPayload();
+  try {
+    const res = await fetch(`http://127.0.0.1:${SERVER_PORT}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('server responded ' + res.status);
+    const data = await res.json();
+    btn.disabled = true;
+    btn.textContent = 'Submitted';
+    showOutput('Sent', data.message || 'Your agent will take it from here — nothing to paste.');
+  } catch (e) {
+    fallbackToClipboard('Could not reach the local server');
+  }
+});
+
+render();
+</script>
+</body>
+</html>

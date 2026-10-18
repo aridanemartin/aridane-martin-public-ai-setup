@@ -2,17 +2,23 @@
 name: compact-conversation
 description: >-
   Compact the current live conversation into a small artifact a fresh chat can
-  resume from, using exactly one compaction technique chosen for the session:
-  rolling window (keep the last N messages), selective pruning (collapse resolved
-  threads, keep open ones in full), or RAG on history (save the full transcript to
-  a file and search it on demand). Detects a handoff mechanism — Herdr, then Orca —
-  and hands the compacted context to a new chat, or prints a copy-paste prompt when
-  none is available. Use when a session is getting long, before switching agents or
-  harnesses, or when the user asks to "compact", "summarize so I can continue",
-  "shrink the context", or "hand this off to a fresh chat".
+  resume from, using exactly one compaction technique: rolling window (keep the
+  last N messages), selective pruning (collapse resolved threads, keep open ones
+  in full), or RAG on history (save the full transcript to a file and search it
+  on demand). Generates a local HTML picker — a tabbed table for the three
+  techniques, pre-marked from a first pass over the session (drag a cutoff line
+  for rolling window, a three-way mark per item for selective pruning, a
+  checklist for RAG on history) — opens it, and starts a tiny local capture
+  server so Submit hands the picks straight back with nothing to copy or paste.
+  Detects Herdr or Orca and opens the handoff directly, with no confirmation
+  question, or prints a copy-paste block when neither is available. Works in
+  any provider's CLI, not just Claude Code — only needs a shell and a browser.
+  Use when a session is getting long, before switching agents or harnesses, or
+  when the user asks to "compact", "summarize so I can continue", "shrink the
+  context", or "hand this off to a fresh chat".
 license: MIT
 metadata:
-  version: "2.0"
+  version: "5.0"
   scope: global
 ---
 
@@ -37,16 +43,37 @@ This skill is **manual and on-demand**. A skill file cannot intercept the host's
 context window or fire at a token threshold, so this never runs automatically and it
 never edits the live context. It produces an artifact when you invoke it.
 
-## Three techniques — pick one
+**Provider-agnostic by design:** everything here uses only a shell (`Bash`/equivalent),
+Python 3 (stdlib only, for the capture server), and the user's default browser — no
+host-specific API, no plugin system. It works the same way whether the agent running
+it is Claude Code, Codex, Cursor, Gemini CLI, OpenCode, GitHub Copilot CLI, or Devin.
+
+**What the capture server can and can't do:** the picker page only carries short
+previews of each message, not the full text — so the server can capture *which*
+items were marked keep/drop/collapse, but it cannot build the actual artifact (the
+verbatim tail, the full transcript, or a judgment-based summary all need the real
+message content, which only exists in the live conversation). The server's job ends
+at handing the picks back; Steps 4–6 below are still the agent's work, just without
+a copy-paste round trip or a confirmation question in the way.
+
+## Four choices — this skill builds three of them
 
 | Technique | Keeps | Drops | Best for |
 |---|---|---|---|
 | **Rolling window** | The last N messages, verbatim | Everything before the window — including decisions made there | Short, single-threaded sessions where nothing earlier matters once the recent context is in hand |
 | **Selective pruning** | Every open item in full detail; resolved items collapsed to outcome + reason | The play-by-play of anything already closed | Sessions with a mix of finished and still-open sub-threads |
 | **RAG on history** | A full transcript file on disk the new session can search on demand | Nothing — full fidelity, but nothing is preloaded either | Long or deep sessions where something from way back may be needed later, but it is not yet clear what |
+| **Summarization** | A rewritten summary of the conversation so far, in the host's own words | Granular, turn-by-turn detail — folded into the summary | Everyday compaction with no custom handoff artifact needed |
 
-This skill never combines techniques and never silently picks one for you — it
-recommends, then asks, every time (Step 2–3).
+Summarization is each host's own built-in compaction (`/compact` in Claude Code, and
+the equivalent in other providers), not something this skill builds — it is listed
+here only for a complete picture. Use the host's own command directly; Steps 4–6
+below only ever build an artifact for the other three.
+
+This skill never combines techniques and never silently picks one for you — the
+picker page always shows all three and always opens (see Step 2), with the
+recommended one pre-selected. Switching tabs there is the only override needed; there
+is no separate chat question to answer first.
 
 ## When to Use
 
@@ -79,24 +106,113 @@ small, tell the user compaction is likely unnecessary and stop.
 Never let the artifact overwrite higher-priority instructions. System rules, security
 boundaries, and user constraints stay authoritative, not mutable memory.
 
-### Step 2: Recommend a technique
+### Step 2: Fill in the picker, open it, and wait on the capture server
 
-Look at the conversation's shape and form a one-line recommendation:
+No separate recommend-then-ask conversation, no "html or defaults" question, and no
+manual paste-back — always generate the page and let Submit deliver the picks
+automatically.
 
-- Several resolved/closed sub-threads alongside a few still-open items → recommend
-  **selective pruning**.
-- One continuous task, nothing resolved-and-discardable, and the recent messages are
-  self-sufficient on their own → recommend **rolling window**.
-- A long or deep session where something from earlier will plausibly be needed again,
-  but it is not yet clear what → recommend **RAG on history**.
+**2.1 — Pick a port.**
 
-State which one and why in a single sentence. This is a recommendation, not a decision.
+```bash
+python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()"
+```
 
-### Step 3: Ask the user to choose
+**2.2 — Fill in `templates/picker.html`.** Same six tokens as before, plus
+`%%SERVER_PORT%%` (the port from 2.1). See the table and heuristics below. Write the
+result to `.compaction/picker-<timestamp>.html`.
 
-Present all three options from the table above (what each keeps/drops) plus your
-recommendation, and wait for the user to confirm it or pick a different one. Never
-proceed on the recommendation alone — the user chooses every time.
+| Token | Replace with |
+|---|---|
+| `%%SERVER_PORT%%` | The port from 2.1, as a bare integer (no quotes) |
+| `%%ITEMS%%` | `{ role: '...', text: '...' }` objects, comma-separated, no brackets — the last ~20–30 messages, oldest first, `text` a ~60-char preview |
+| `%%ROLLING_RECOMMENDED%%` / `%%PRUNING_RECOMMENDED%%` / `%%RAG_RECOMMENDED%%` | `true` on exactly one, `false` on the other two |
+| `%%ROLLING_TEXT%%` / `%%PRUNING_TEXT%%` / `%%RAG_TEXT%%` | Quoted JS strings. The recommended one gets your session-specific reasoning (one sentence); the other two keep the generic "best for" description from the table above |
+| `%%CUTOFF_DEFAULT%%` | An integer index into `%%ITEMS%%` — see the prediction heuristics below |
+| `%%PRUNE_DEFAULTS%%` | `'full'`/`'collapse'`/`'drop'`, comma-separated, one per item, same order as `%%ITEMS%%` |
+| `%%RAG_DEFAULTS%%` | `true`/`false`, comma-separated, one per item, same order as `%%ITEMS%%` |
+
+**Recommendation heuristics** (decide which one gets `_RECOMMENDED: true`):
+
+- Several resolved/closed sub-threads alongside a few still-open items → **selective
+  pruning**.
+- One continuous task, nothing resolved-and-discardable, recent messages are
+  self-sufficient on their own → **rolling window**.
+- Long or deep session where something from earlier will plausibly be needed again,
+  but it is not yet clear what → **RAG on history**.
+
+If the user's own invoking message already named a technique, use that one instead of
+the heuristic — set that one `recommended: true` and skip the reasoning above.
+
+**Prediction heuristics** (don't default to "keep everything" — mark what you'd
+actually prune, the user corrects from there):
+
+- `%%CUTOFF_DEFAULT%%`: find where the session's most recent self-contained thread
+  starts; messages before that are prediction-dropped. Resist the urge to default to
+  "keep all" (cutoff 0) — if nothing looks droppable, say so by setting the cutoff
+  low, don't leave the field unconsidered.
+- `%%PRUNE_DEFAULTS%%`: `'collapse'` for threads that reached a conclusion (shipped,
+  merged, answered, abandoned in favor of something else); `'drop'` only for pure
+  process noise with no decision in it; `'full'` for anything still open or load-bearing
+  for what comes next.
+- `%%RAG_DEFAULTS%%`: default `true` (RAG's point is full fidelity) — only predict
+  `false` for clear noise (a failed attempt superseded one message later, pure tool
+  chatter with no decision).
+
+**2.3 — Open the page.** Try, in order, until one succeeds, and tell the user which
+path you used: `open <path>` (macOS), `xdg-open <path>` (Linux), `start "" <path>`
+(Windows). If none exist, print the file's path and ask the user to open it manually
+— and skip straight to the clipboard/paste path in Step 3, since there's no point
+starting a server nobody can reach a browser to submit to.
+
+**2.4 — Start the capture server and wait.** In one line, so opening and waiting
+happen in the same turn:
+
+```bash
+python3 templates/server.py <port> .compaction/server-result-<timestamp>.json 570
+```
+
+Run this with a tool timeout around 590s (under most hosts' 600s cap, above the
+server's own 570s idle shutdown). This call **blocks until the user submits or the
+timeout elapses** — that block *is* the wait; there is nothing else to do while it
+runs. Tell the user in one line, before this call, what's about to happen: the page
+is open, marking anything and hitting Submit is all that's needed, nothing to copy or
+paste. Then make the call.
+
+If the tool call returns because the server's own idle timeout fired (no result file
+written), tell the user the page is still open and ask whether to wait again or stop.
+
+### Step 3: Read the picks back
+
+**If `.compaction/server-result-<timestamp>.json` exists** (the common path): read it.
+Shape:
+
+```json
+{ "technique": "Selective pruning", "items": [{ "role": "user", "text": "...", "state": "full" }] }
+```
+
+`state` is `"keep"`/`"drop"` for rolling window and RAG on history, or
+`"full"`/`"collapse"`/`"drop"` for selective pruning.
+
+**If the user pasted text instead** (the server was unreachable, so the page fell back
+to its clipboard copy — same information, different delivery): it opens with
+`TECHNIQUE: <label>`, then one of:
+
+```
+KEEP: role: preview | role: preview
+DROP: role: preview | role: preview
+```
+```
+FULL DETAIL: role: preview | ...
+COLLAPSE TO OUTCOME+REASON: role: preview | ...
+DROP ENTIRELY: role: preview | ...
+```
+
+Either way, these are the user's explicit, final decisions — honor them directly in
+Step 4 rather than re-judging those specific items. They only cover the messages
+shown in the page; use normal judgement for anything older. If a pasted message
+doesn't match the `TECHNIQUE:` + marks shape, ask once for clarification rather than
+guessing.
 
 ### Step 4: Build the artifact
 
@@ -108,14 +224,14 @@ Goal: <one line>
 Next action: <one line>
 ```
 
-Then it branches by the chosen technique.
+Then it branches by the technique named in Step 3.
 
 **4a — Rolling window**
 
-Append the last **N messages verbatim** below the header — exact text, not rewritten.
-Default `N = 12`; let the user override it. Nothing older is retained anywhere in the
-artifact. This is the deliberate trade-off: fast and cheap, but a decision made 20
-messages ago is gone unless it is still visible in the window.
+Append the **`keep`-state messages verbatim** below the header — exact text, not
+rewritten. Nothing marked `drop` is retained anywhere in the artifact. This is the
+deliberate trade-off: fast and cheap, but a dropped decision is gone unless it is
+explicitly kept.
 
 **4b — Selective pruning**
 
@@ -136,19 +252,19 @@ Build a structured-state block below the header:
 }
 ```
 
-Resolved items collapse to **outcome + reason only** — one line each, no replay of how
-the thread got there. Open items (open questions, pending next actions, unresolved
-constraints) keep full detail. For anything bulky — test output, logs — cite an
-evidence pointer (`tests failed in run test-184`) instead of pasting it, as long as it
-is retrievable later.
+`full`-state items map to open/kept-in-full; `collapse`-state items collapse to
+**outcome + reason only** — one line each, no replay of how the thread got there;
+`drop`-state items are left out of the block altogether. For anything bulky — test
+output, logs — cite an evidence pointer (`tests failed in run test-184`) instead of
+pasting it, as long as it is retrievable later.
 
 **4c — RAG on history**
 
 Write the full live transcript, verbatim, to a file — default
 `.compaction/<timestamp>-transcript.md` in the project, or ask the user for a
-different location. The artifact itself stays small: header + the file path + one
-line telling the new session to search that file on demand rather than read it
-upfront:
+different location. Leave `drop`-state messages out of this file. The artifact itself
+stays small: header + the file path + one line telling the new session to search
+that file on demand rather than read it upfront:
 
 ```
 Full history: .compaction/2026-10-18-1432-transcript.md
@@ -164,11 +280,13 @@ Order matters — authority first, recency/detail last:
    constraints remain in force and were not replaced by this artifact.
 2. **Shared header** — goal + next action from Step 4.
 3. **Technique body** — the rolling-window tail, the structured-state block, or the
-   transcript-file pointer, per the technique chosen in Step 3.
+   transcript-file pointer, per the technique named in Step 3.
 
-### Step 6: Pick a destination (capability ladder)
+### Step 6: Detect the destination and hand off — no confirmation question
 
-Try, in order, to hand the artifact to a fresh chat:
+Spawning is still a visible action, so always tell the user what you're doing and why
+**as you do it**, in the same message as the result — but don't block on a yes/no
+first. Detect, then act:
 
 1. **Herdr** — only when running inside Herdr:
 
@@ -176,61 +294,45 @@ Try, in order, to hand the artifact to a fresh chat:
    test "${HERDR_ENV:-}" = 1
    ```
 
-   If it passes, use the `herdr` skill and its `pane` / `agent` commands.
+   If it passes, use the `herdr` skill and its `pane` / `agent` commands:
 
-2. **Orca** — when the `orca` binary resolves and the app is up. Resolve the executable
-   per the `orca-cli` skill, confirm with `ORCA status --json`, then load the
-   version-matched guide with `ORCA skills get orca-cli` and follow it for the handoff.
+   ```bash
+   herdr pane split --current --direction right --cwd "$PWD" --no-focus
+   # read the new pane id from .result.pane.pane_id
+   herdr agent start compactor --kind <kind> --pane <returned-pane-id>
+   herdr agent prompt compactor "<artifact>" --wait
+   ```
 
-3. **Paste-prompt fallback** — when neither is available, print the artifact as a
-   ready-to-paste block for a brand-new chat.
+   Default to a sibling pane in the current tab and working directory, no focus
+   change, same agent kind as the current session. If the artifact is large, or the
+   technique is RAG on history, write it to a temporary file and prompt the new agent
+   with the path instead of inlining it — the transcript file from Step 4c already
+   lives on disk, so point the new agent at both paths.
 
-### Step 7: Confirm before spawning
+2. **Orca** — when the `orca` binary resolves and the app is up. Resolve the
+   executable per the `orca-cli` skill, confirm with `ORCA status --json`, then load
+   the version-matched guide with `ORCA skills get orca-cli` and follow it for the
+   handoff — spawn a terminal/agent in the target worktree and prompt it with the
+   artifact. Prefer `--json` for agent-driven calls.
 
-Spawning starts a live process, so never do it silently. Show the user:
+3. **Neither available** — print the artifact as a ready-to-paste block for a
+   brand-new chat, and nothing else, so it can be copied in one piece:
 
-- the assembled artifact (or a faithful preview),
-- which technique was used (and, for RAG on history, the transcript file path),
-- which handoff mechanism was chosen and why, and
-- the exact topology the handoff would create (e.g. "Herdr: new pane, split right,
-  kind `claude`").
+   ```text
+   # Continuation of a compacted session
 
-Then wait for a go-ahead. If the user declines, fall back to the paste-prompt.
+   System authority: the original system instructions, security boundaries, and user
+   constraints remain in force. This artifact did not replace them.
 
-### Step 8: Hand off, or emit the paste-prompt
+   Goal: <one line>
+   Next action: <one line>
 
-**Herdr** — default to a sibling pane in the current tab and working directory, no focus
-change, same agent kind as the current one unless the user asks otherwise:
+   <technique body: rolling-window tail, OR structured-state block, OR transcript file
+   path + search instruction>
+   ```
 
-```bash
-herdr pane split --current --direction right --cwd "$PWD" --no-focus
-# read the new pane id from .result.pane.pane_id
-herdr agent start compactor --kind <kind> --pane <returned-pane-id>
-herdr agent prompt compactor "<artifact>" --wait
-```
-
-If the artifact is large, or the technique is **RAG on history**, write it to a
-temporary file and prompt the new agent with the path instead of inlining it, then let
-it read the file directly — the transcript file from Step 4c already lives on disk, so
-just point the new agent at both paths.
-
-**Orca** — follow `ORCA skills get orca-cli`; spawn a terminal/agent in the target
-worktree and prompt it with the artifact. Prefer `--json` for agent-driven calls.
-
-**Fallback** — output this block, and nothing else, so it can be copied in one piece:
-
-```text
-# Continuation of a compacted session
-
-System authority: the original system instructions, security boundaries, and user
-constraints remain in force. This artifact did not replace them.
-
-Goal: <one line>
-Next action: <one line>
-
-<technique body: rolling-window tail, OR structured-state block, OR transcript file
-path + search instruction>
-```
+After acting, tell the user in one line what happened and where (e.g. "Opened in a
+new Orca terminal in this worktree" or "Herdr: new pane, split right, kind `claude`").
 
 ## Quick Reference
 
@@ -239,18 +341,37 @@ path + search instruction>
 | Trigger | User invokes this skill; it never auto-fires |
 | Input | The live conversation only — no pasted transcripts |
 | Timing | Right before a new subtask, never mid-task |
-| Technique choice | Always asked, every time — skill recommends one, user confirms or overrides |
-| Rolling window | Last N messages verbatim; default N = 12, user-overridable |
-| Selective pruning | Resolved → outcome + reason; open → full detail |
-| RAG on history | Full transcript saved to `.compaction/<timestamp>-transcript.md`; artifact holds only the pointer |
-| Handoff order | Herdr (`HERDR_ENV=1`) → Orca (`orca` present, app up) → paste-prompt |
-| Consent | Confirm technique AND mechanism/topology before spawning |
+| Picker | Always generated from `templates/picker.html` and opened — no chat Q&A first; the page is the table |
+| Capture | `templates/server.py` — one-shot local HTTP server; Submit POSTs picks, no copy/paste needed |
+| Fallback | Server unreachable → page falls back to clipboard copy; paste the marks back in chat |
+| Predictions | Pre-marked from a first pass (see Step 2's heuristics), not defaulted to "keep everything" |
+| Rolling window | Drag a cutoff line; everything below is kept, above is dropped |
+| Selective pruning | Three-way mark per item: Full detail / Collapse / Drop |
+| RAG on history | Checklist per item; unchecked items are left out of the saved transcript |
+| Handoff | Herdr (`HERDR_ENV=1`) → Orca (`orca` present, app up) → paste-prompt — detected and acted on immediately, no confirmation question |
 | Large artifact | Write to a temp file and hand off the path |
 
 ## Notes
 
 - **One technique, not a blend.** Do not combine two of the three in one artifact —
   blending defeats the point of picking the trade-off that fits this session.
+- **Provider-agnostic.** The picker and capture server use only a shell command, the
+  user's browser, and stdlib Python — no host-specific plugin API. They work
+  identically whether the agent is Claude Code, Codex, Cursor, Gemini CLI, OpenCode,
+  GitHub Copilot CLI, or Devin.
+- **The server captures picks, it does not build artifacts.** It only has what the
+  page has — short previews, not full message text — so it cannot write the verbatim
+  tail, the full transcript, or a judgment-based summary. That stays the agent's job
+  in Steps 4–6, which is also why there's no way to fully skip the agent even when
+  Herdr/Orca auto-spawns.
+- **No confirmation before spawning.** Step 6 acts immediately on what it detects and
+  reports the outcome afterward, rather than asking first — tell the user what
+  happened, don't ask permission before it happens.
+- **The template is fixed, the data isn't.** `templates/picker.html` and
+  `templates/server.py` are the same files every time — don't redesign them per
+  invocation. Only the picker's six `%%TOKEN%%` values change, computed fresh from
+  the live conversation each time this skill runs; the server takes its port and
+  result path as plain arguments, no templating needed.
 - **Evidence pointers over paraphrase:** in selective pruning, cite a retrievable
   pointer (file path, run ID, URL) for bulky content instead of pasting it.
 - **Excluded on purpose:** prompt compression. It solves a different problem (bulky
